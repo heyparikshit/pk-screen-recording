@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { CapsPageView } from "./caps-page-data";
 
 export const metadata: Metadata = {
-	title: "My Caps — Cap",
+	title: "My Shots — Cap",
 };
 
 export default async function CapsPage(props: PageProps<"/dashboard/caps">) {

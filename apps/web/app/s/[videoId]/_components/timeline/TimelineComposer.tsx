@@ -1,11 +1,16 @@
 "use client";
 
-import { Comment, type Video } from "@cap/web-domain";
+import { Comment, type User, type Video } from "@cap/web-domain";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { startTransition, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { guestComment } from "@/actions/videos/guest-comment";
 import { newComment } from "@/actions/videos/new-comment";
 import { useCurrentUser } from "@/app/Layout/AuthContext";
+import {
+	readStoredGuestName,
+	writeStoredGuestName,
+} from "@/lib/guest-name-storage";
 import type { CommentType } from "../../Share";
 import { AuthOverlay } from "../AuthOverlayLazy";
 import { MicGlyph } from "./TimelineBranch";
@@ -73,16 +78,24 @@ export function TimelineComposer({
 	const user = useCurrentUser();
 	const reduceMotion = useReducedMotion() ?? false;
 	const [value, setValue] = useState("");
+	const [guestName, setGuestName] = useState("");
 	const [showAuthOverlay, setShowAuthOverlay] = useState(false);
 
 	// Both have to agree: the page was rendered for a signed-in viewer and the
 	// client knows who that is.
-	const canComment = viewerSignedIn && user !== null;
+	const isAuthed = viewerSignedIn && user !== null;
+	// Recording a reply is a bigger ask than typing a comment, so it still
+	// requires a real account; plain text comments don't.
+	const canRecordReply = isAuthed;
 	const anchorTime = composerAnchor?.t ?? 0;
 
 	useEffect(() => {
 		if (!composerAnchor) setValue("");
 	}, [composerAnchor]);
+
+	useEffect(() => {
+		if (!isAuthed) setGuestName(readStoredGuestName());
+	}, [isAuthed]);
 
 	const anchorRef = useRef(composerAnchor);
 	anchorRef.current = composerAnchor;
@@ -94,13 +107,17 @@ export function TimelineComposer({
 
 	const submit = async () => {
 		const content = value.trim();
-		if (!content || !user || !canComment) return;
+		if (!content) return;
+		if (!isAuthed && !guestName.trim()) {
+			toast.error("Enter your name to comment");
+			return;
+		}
 
 		const optimistic: CommentType = {
 			id: Comment.CommentId.make(`temp-${Date.now()}`),
-			authorId: user.id,
-			authorName: user.name,
-			authorImage: user.imageUrl,
+			authorId: user?.id ?? ("" as User.UserId),
+			authorName: isAuthed ? user?.name : guestName,
+			authorImage: isAuthed ? (user?.imageUrl ?? null) : null,
 			content,
 			createdAt: new Date(),
 			videoId,
@@ -119,14 +136,23 @@ export function TimelineComposer({
 		closeComposer();
 
 		try {
-			const saved = await newComment({
-				content,
-				videoId,
-				authorImage: user.imageUrl,
-				parentCommentId: Comment.CommentId.make(""),
-				type: "text",
-				timestamp: anchorTime,
-			});
+			const saved = isAuthed
+				? await newComment({
+						content,
+						videoId,
+						authorImage: user?.imageUrl ?? null,
+						parentCommentId: Comment.CommentId.make(""),
+						type: "text",
+						timestamp: anchorTime,
+					})
+				: await guestComment({
+						content,
+						videoId,
+						guestName,
+						parentCommentId: Comment.CommentId.make(""),
+						timestamp: anchorTime,
+					});
+			if (!isAuthed) writeStoredGuestName(guestName);
 			startTransition(() => {
 				onCommentSuccess?.(saved);
 			});
@@ -189,45 +215,41 @@ export function TimelineComposer({
 									{formatClock(anchorTime)}
 								</span>
 								<span className="text-xs text-gray-10">
-									{canComment
-										? "Comment at this moment"
-										: "Join the conversation"}
+									{isAuthed ? "Comment at this moment" : "Join the conversation"}
 								</span>
 							</div>
 
-							{canComment ? (
+							{!isAuthed && (
 								<input
-									// biome-ignore lint/a11y/noAutofocus: the composer is opened by an explicit click.
-									autoFocus
 									type="text"
-									value={value}
-									maxLength={255}
-									placeholder="Add a comment"
-									aria-label={`Comment at ${formatClock(anchorTime)}`}
-									onChange={(event) => setValue(event.target.value)}
-									onBlur={() => {
-										if (!value.trim()) closeComposer();
-									}}
-									onKeyDown={(event) => {
-										if (
-											event.key === "Enter" &&
-											!event.nativeEvent.isComposing
-										) {
-											event.preventDefault();
-											void submit();
-										}
-									}}
-									className="h-8 w-full rounded-lg bg-gray-2 px-2 text-sm text-gray-12 outline-none ring-1 ring-gray-4 placeholder:text-gray-9 focus:ring-blue-9"
+									value={guestName}
+									maxLength={100}
+									placeholder="Your name"
+									aria-label="Your name"
+									onChange={(event) => setGuestName(event.target.value)}
+									className="h-7 w-full rounded-lg bg-gray-2 px-2 text-xs font-medium text-gray-12 outline-none ring-1 ring-gray-4 placeholder:text-gray-8 placeholder:font-normal focus:ring-blue-9"
 								/>
-							) : (
-								<button
-									type="button"
-									onClick={requestAuth}
-									className="h-8 w-full rounded-lg bg-gray-12 text-[13px] font-medium text-white transition-opacity hover:opacity-90"
-								>
-									Sign in to comment
-								</button>
 							)}
+							<input
+								// biome-ignore lint/a11y/noAutofocus: the composer is opened by an explicit click.
+								autoFocus={isAuthed}
+								type="text"
+								value={value}
+								maxLength={255}
+								placeholder="Add a comment"
+								aria-label={`Comment at ${formatClock(anchorTime)}`}
+								onChange={(event) => setValue(event.target.value)}
+								onBlur={() => {
+									if (!value.trim()) closeComposer();
+								}}
+								onKeyDown={(event) => {
+									if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+										event.preventDefault();
+										void submit();
+									}
+								}}
+								className="h-8 w-full rounded-lg bg-gray-2 px-2 text-sm text-gray-12 outline-none ring-1 ring-gray-4 placeholder:text-gray-9 focus:ring-blue-9"
+							/>
 
 							{/* Reserved even when empty so the recording phase can drop its
 							    buttons in without the card changing height. preventDefault
@@ -246,7 +268,7 @@ export function TimelineComposer({
 												aria-label={option.label}
 												title={option.label}
 												onClick={() => {
-													if (!canComment) {
+													if (!canRecordReply) {
 														requestAuth();
 														return;
 													}

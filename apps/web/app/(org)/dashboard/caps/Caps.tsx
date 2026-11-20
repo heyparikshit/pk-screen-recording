@@ -242,7 +242,7 @@ export const Caps = ({
 			yield* rpc.VideoDelete(id);
 		}),
 		onSuccess: () => {
-			toast.success("Cap deleted successfully");
+			toast.success("Shot deleted successfully");
 			router.refresh();
 		},
 		onError: (_error: unknown) => toast.error("Failed to delete cap"),
@@ -313,7 +313,7 @@ export const Caps = ({
 			{isArchivedView ? (
 				<div className="mb-8">
 					<p className="max-w-xl text-sm text-gray-10 text-pretty">
-						Archived Caps are hidden from My Caps and your folders. Their links,
+						Archived Shots are hidden from My Shots and your folders. Their links,
 						comments and any spaces they are shared with keep working.
 					</p>
 				</div>
@@ -329,7 +329,7 @@ export const Caps = ({
 						scope="personal"
 						folders={folders}
 						canMove
-						moveRootLabel="My Caps"
+						moveRootLabel="My Shots"
 					/>
 				</>
 			)}
@@ -346,7 +346,7 @@ export const Caps = ({
 							Nothing archived
 						</p>
 						<p className="max-w-sm text-sm text-gray-10 text-pretty">
-							Archive a Cap from its menu to tidy up My Caps without deleting
+							Archive a Shot from its menu to tidy up My Shots without deleting
 							anything.
 						</p>
 					</div>
@@ -354,7 +354,7 @@ export const Caps = ({
 						href="/dashboard/caps"
 						className={clsx(listControlClass, "px-3 mt-1")}
 					>
-						Back to My Caps
+						Back to My Shots
 					</Link>
 				</div>
 			)}
@@ -416,7 +416,7 @@ export const Caps = ({
 												selectedIds={selectedCaps}
 												canMove={!isArchivedView}
 												moveLocation={moveLocation}
-												moveRootLabel="My Caps"
+												moveRootLabel="My Shots"
 												isArchived={isArchivedView}
 												onArchiveToggle={() =>
 													void archiveCaps.mutate({
@@ -452,7 +452,7 @@ export const Caps = ({
 				deleteSelectedCaps={() => deleteCaps(selectedCaps)}
 				isDeleting={isDeletingCaps || isDeletingCap}
 				moveLocation={isArchivedView ? undefined : moveLocation}
-				moveRootLabel={isArchivedView ? undefined : "My Caps"}
+				moveRootLabel={isArchivedView ? undefined : "My Shots"}
 				selection={selection}
 				archive={{
 					mode: isArchivedView ? "unarchive" : "archive",

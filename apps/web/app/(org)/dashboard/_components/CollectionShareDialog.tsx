@@ -263,7 +263,7 @@ export const CollectionShareDialog = ({
 									{settings.layout === "grid" && (
 										<SettingRow
 											label="Columns"
-											description="Caps shown per row"
+											description="Shots shown per row"
 										>
 											<Select
 												size="sm"

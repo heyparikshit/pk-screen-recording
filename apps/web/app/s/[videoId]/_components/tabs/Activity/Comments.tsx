@@ -18,9 +18,11 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { deleteComment } from "@/actions/videos/delete-comment";
+import { guestComment } from "@/actions/videos/guest-comment";
 import { newComment } from "@/actions/videos/new-comment";
 import { useCurrentUser } from "@/app/Layout/AuthContext";
 import { FontAwesomeIcon } from "@/components/FontAwesomeIcon";
+import { writeStoredGuestName } from "@/lib/guest-name-storage";
 import type { CommentType } from "../../../Share";
 import { ActivityComposer } from "./ActivityComposer";
 import CommentComponent from "./Comment";
@@ -52,7 +54,6 @@ export const Comments = Object.assign(
 			onSeek,
 			commentsDisabled,
 			videoId,
-			setShowAuthOverlay,
 		} = props;
 		const commentParams = useSearchParams().get("comment");
 		const replyParams = useSearchParams().get("reply");
@@ -147,8 +148,12 @@ export const Comments = Object.assign(
 		};
 
 		const handleReply = useCallback(
-			async (content: string, replyingTo: Comment.CommentId) => {
-				if (!user) return;
+			async (
+				content: string,
+				replyingTo: Comment.CommentId,
+				guestName?: string,
+			) => {
+				if (!user && !guestName?.trim()) return;
 
 				const videoElement = document.querySelector(
 					"video",
@@ -164,9 +169,9 @@ export const Comments = Object.assign(
 
 				const optimisticReply: CommentType = {
 					id: `temp-reply-${Date.now()}` as Comment.CommentId,
-					authorId: user.id,
-					authorName: user.name,
-					authorImage: user.imageUrl,
+					authorId: (user?.id ?? "") as User.UserId,
+					authorName: user ? user.name : guestName,
+					authorImage: user?.imageUrl ?? null,
 					content,
 					createdAt: new Date(),
 					videoId,
@@ -184,15 +189,24 @@ export const Comments = Object.assign(
 					setOptimisticComments(optimisticReply);
 				});
 
-				const data = await newComment({
-					content,
-					videoId,
-					parentCommentId: actualParentId,
-					type: "text",
-					timestamp: currentTime,
-					authorImage: user.imageUrl,
-				});
+				const data = user
+					? await newComment({
+							content,
+							videoId,
+							parentCommentId: actualParentId,
+							type: "text",
+							timestamp: currentTime,
+							authorImage: user.imageUrl,
+						})
+					: await guestComment({
+							content,
+							videoId,
+							guestName: guestName as string,
+							parentCommentId: actualParentId,
+							timestamp: currentTime,
+						});
 
+				if (!user && guestName) writeStoredGuestName(guestName);
 				handleCommentSuccess(data);
 
 				const newReplyElement = document.getElementById(`comment-${data.id}`);
@@ -213,17 +227,59 @@ export const Comments = Object.assign(
 			],
 		);
 
+		const handleGuestComment = useCallback(
+			async (content: string, guestName: string) => {
+				if (!guestName.trim()) {
+					toast.error("Enter your name to comment");
+					return;
+				}
+
+				const videoElement = document.querySelector("video") as HTMLVideoElement;
+				const currentTime = videoElement?.currentTime || 0;
+
+				const optimisticComment: CommentType = {
+					id: `temp-${Date.now()}` as Comment.CommentId,
+					authorId: "" as User.UserId,
+					authorName: guestName,
+					authorImage: null,
+					content,
+					createdAt: new Date(),
+					videoId,
+					parentCommentId: "" as Comment.CommentId,
+					type: "text",
+					timestamp: currentTime,
+					updatedAt: new Date(),
+					mediaKey: null,
+					mediaDuration: null,
+					mediaMeta: null,
+					sending: true,
+				};
+
+				startTransition(() => {
+					setOptimisticComments(optimisticComment);
+				});
+
+				const data = await guestComment({
+					content,
+					videoId,
+					guestName,
+					parentCommentId: "" as Comment.CommentId,
+					timestamp: currentTime,
+				});
+
+				writeStoredGuestName(guestName);
+				handleCommentSuccess(data);
+			},
+			[videoId, setOptimisticComments, handleCommentSuccess],
+		);
+
 		const handleCancelReply = useCallback(() => {
 			setReplyingTo(null);
 		}, []);
 
-		const handleStartReply = useCallback(
-			(id: Comment.CommentId) => {
-				if (!user) setShowAuthOverlay(true);
-				else setReplyingTo(id);
-			},
-			[user, setShowAuthOverlay],
-		);
+		const handleStartReply = useCallback((id: Comment.CommentId) => {
+			setReplyingTo(id);
+		}, []);
 
 		const handleDeleteComment = useCallback(
 			async (
@@ -249,6 +305,7 @@ export const Comments = Object.assign(
 			<Comments.Shell
 				commentInputProps={{
 					onSubmit: handleNewComment,
+					onGuestSubmit: handleGuestComment,
 					disabled: commentsDisabled,
 				}}
 				setShowAuthOverlay={props.setShowAuthOverlay}
@@ -308,6 +365,10 @@ export const Comments = Object.assign(
 				setShowAuthOverlay: (v: boolean) => void;
 				commentInputProps?: {
 					onSubmit?: (content: string) => void | Promise<void>;
+					onGuestSubmit?: (
+						content: string,
+						guestName: string,
+					) => void | Promise<void>;
 					disabled?: boolean;
 				};
 				commentsContainerRef?: React.RefObject<HTMLDivElement | null>;
@@ -335,7 +396,9 @@ export const Comments = Object.assign(
 							onSubmit={(content) =>
 								props.commentInputProps?.onSubmit?.(content)
 							}
-							setShowAuthOverlay={props.setShowAuthOverlay}
+							onGuestSubmit={(content, guestName) =>
+								props.commentInputProps?.onGuestSubmit?.(content, guestName)
+							}
 							canRecordMedia={props.canRecordMedia}
 							onOptimisticComment={props.onOptimisticComment}
 							onCommentSuccess={props.onCommentSuccess}

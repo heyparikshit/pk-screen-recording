@@ -115,7 +115,7 @@ export function BreadcrumbItem({
 			console.error("Error moving video to folder:", error);
 			toast.error(
 				capPayload.ids.length > 1
-					? "Failed to move Caps to folder"
+					? "Failed to move Shots to folder"
 					: "Failed to move video to folder",
 			);
 		} finally {

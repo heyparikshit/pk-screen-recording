@@ -129,7 +129,7 @@ export function QuickActions({ onNewFolder }: { onNewFolder: () => void }) {
 			<QuickActionTile
 				icon={<FolderPlus className="size-[18px]" strokeWidth={2} />}
 				title="New folder"
-				hint="Keep related Caps together"
+				hint="Keep related Shots together"
 				onClick={onNewFolder}
 			/>
 		</div>

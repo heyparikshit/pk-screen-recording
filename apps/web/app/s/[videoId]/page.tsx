@@ -99,6 +99,7 @@ import {
 	areEditSpecsEquivalent,
 	createIdentityEditSpec,
 } from "@/lib/video-edits";
+import { isTranscriptionConfigured } from "@/lib/transcription-provider";
 import { getVideoViewCount } from "@/lib/video-view-count";
 import { optionFromTOrFirst } from "@/utils/effect";
 import { isAiGenerationEnabled } from "@/utils/flags";
@@ -979,10 +980,9 @@ async function AuthorizedContent({
 		organizationSettings: video.orgSettings,
 		spaces: sharedSpaces.filter((space) => space.id !== space.organizationId),
 	});
-	const env = serverEnv();
 	const transcriptionGenerationAvailable =
 		!video.isScreenshot &&
-		Boolean(env.ASSEMBLY_API_KEY) &&
+		isTranscriptionConfigured() &&
 		!rules.settings.disableTranscript;
 	const aiProviderAvailable = isAiConfigured();
 

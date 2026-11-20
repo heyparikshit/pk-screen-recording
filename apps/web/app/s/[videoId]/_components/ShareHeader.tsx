@@ -151,7 +151,7 @@ const SIGNED_OUT_LINKS = [
 const TITLE_TEXT_CLASS =
 	"text-xl leading-7 font-normal sm:text-2xl sm:leading-8";
 
-const TITLE_PLACEHOLDER = "Cap title";
+const TITLE_PLACEHOLDER = "Shot title";
 
 const ACTION_BAR_BUTTON_CLASS =
 	"h-10 min-w-0 gap-1.5 rounded-full px-3 text-[13px] sm:h-8 sm:px-2.5 sm:text-xs";
@@ -491,7 +491,7 @@ export const ShareHeader = ({
 	const copyShareLink = (url: string) =>
 		copyRichVideoLink({
 			url,
-			title: displayTitle || "Cap Recording",
+			title: displayTitle || "Shot Recording",
 			previewImageUrl: videoPreviewImageUrl(webUrl, data.id),
 		});
 
@@ -602,7 +602,7 @@ export const ShareHeader = ({
 			className={clsx("gap-1.5 px-3", className)}
 			size="xs"
 			variant="blue"
-			aria-label="Share this Cap"
+			aria-label="Share this Shot"
 			onClick={openShareLinkDialog}
 			onPointerEnter={() => {
 				void importShareLinkDialog();
@@ -910,7 +910,7 @@ export const ShareHeader = ({
 							open={moveDialogOpen}
 							onOpenChange={setMoveDialogOpen}
 							location={{ type: "personal" }}
-							rootLabel="My Caps"
+							rootLabel="My Shots"
 							organizationId={data.orgId ?? undefined}
 							item={{
 								type: "videos",
@@ -1061,7 +1061,7 @@ export const ShareHeader = ({
 											maxLength={255}
 											spellCheck={false}
 											autoComplete="off"
-											aria-label="Cap title"
+											aria-label="Shot title"
 											placeholder={TITLE_PLACEHOLDER}
 											onChange={(e) => setEditValue(e.target.value)}
 											onBlur={handleTitleBlur}
@@ -1221,7 +1221,7 @@ export const ShareHeader = ({
 													<Button
 														variant="dark"
 														size="xs"
-														aria-label="Manage Cap"
+														aria-label="Manage Shot"
 														className={clsx(ACTION_BAR_BUTTON_CLASS, "sm:px-3")}
 													>
 														<FontAwesomeIcon
@@ -1229,7 +1229,7 @@ export const ShareHeader = ({
 															icon={faEllipsis}
 														/>
 														<span className="truncate sm:hidden">Manage</span>
-														<span className="hidden sm:inline">Manage Cap</span>
+														<span className="hidden sm:inline">Manage Shot</span>
 													</Button>
 												</DropdownMenuTrigger>
 												<DropdownMenuContent
@@ -1409,7 +1409,7 @@ export const ShareHeader = ({
 															className="size-3"
 															icon={faTrash}
 														/>
-														<p className="text-sm text-inherit">Delete Cap</p>
+														<p className="text-sm text-inherit">Delete Shot</p>
 													</DropdownMenuItem>
 												</DropdownMenuContent>
 											</DropdownMenu>

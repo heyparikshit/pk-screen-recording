@@ -85,7 +85,7 @@ export function PageSizeSelect({ pageSize }: { pageSize: number }) {
 			<DropdownMenuTrigger asChild>
 				<button
 					type="button"
-					aria-label={`Caps per page: ${pageSize}`}
+					aria-label={`Shots per page: ${pageSize}`}
 					disabled={isPending}
 					className={clsx(listControlClass, "gap-2 px-3 tabular-nums")}
 				>

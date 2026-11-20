@@ -145,6 +145,18 @@ function createServerEnv() {
 				.describe(
 					"Transcription API base URL (eg. https://api.eu.assemblyai.com)",
 				),
+			DEEPGRAM_API_KEY: z
+				.string()
+				.optional()
+				.describe(
+					"Audio transcription via Deepgram (used for batch/caption transcription when ASSEMBLY_API_KEY is not set; does not power instant-mode live transcription)",
+				),
+			DEEPGRAM_BASE_URL: z
+				.string()
+				.optional()
+				.describe(
+					"Deepgram listen endpoint override (defaults to https://api.deepgram.com/v1/listen)",
+				),
 			LIVE_TRANSCRIBE_CONTEXT_SECONDS: z
 				.string()
 				.optional()

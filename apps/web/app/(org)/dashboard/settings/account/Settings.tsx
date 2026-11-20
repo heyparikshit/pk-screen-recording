@@ -205,7 +205,7 @@ export const Settings = () => {
 						/>
 						<SettingsRow
 							title={<label htmlFor={firstNameId}>Your name</label>}
-							description="Changing your name will update how it appears when sharing a Cap, and in your profile."
+							description="Changing your name will update how it appears when sharing a Shot, and in your profile."
 							control={
 								<div className="flex gap-2 w-full sm:w-auto">
 									<Input

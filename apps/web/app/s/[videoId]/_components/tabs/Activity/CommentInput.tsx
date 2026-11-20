@@ -27,6 +27,13 @@ interface CommentInputProps {
 	 * of the sidebar costs one row; replies keep the always-open form.
 	 */
 	collapsible?: boolean;
+	/**
+	 * Unauthenticated commenting: a name input appears above the textarea and
+	 * is required before submit. Controlled so the caller can remember it
+	 * (e.g. localStorage) across comments from the same browser.
+	 */
+	guestName?: string;
+	onGuestNameChange?: (name: string) => void;
 }
 
 const CommentInput: React.FC<CommentInputProps> = ({
@@ -40,11 +47,15 @@ const CommentInput: React.FC<CommentInputProps> = ({
 	avatar,
 	actions,
 	collapsible = false,
+	guestName,
+	onGuestNameChange,
 }) => {
 	const [content, setContent] = useState("");
 	const [focused, setFocused] = useState(false);
 	const [isSubmitting, startTransition] = useTransition();
 	const inputRef = useRef<HTMLTextAreaElement>(null);
+	const nameInputRef = useRef<HTMLInputElement>(null);
+	const isGuest = onGuestNameChange !== undefined;
 
 	useEffect(() => {
 		if (autoFocus && inputRef.current) {
@@ -56,6 +67,11 @@ const CommentInput: React.FC<CommentInputProps> = ({
 
 	const handleSubmit = () => {
 		if (!content.trim() || disabled || isSubmitting || !onSubmit) return;
+		if (isGuest && !guestName?.trim()) {
+			toast.error("Enter your name to comment");
+			nameInputRef.current?.focus();
+			return;
+		}
 		startTransition(async () => {
 			try {
 				await onSubmit(content);
@@ -79,6 +95,18 @@ const CommentInput: React.FC<CommentInputProps> = ({
 				<div className="flex items-start gap-2 p-2 rounded-lg border bg-gray-1 border-gray-5 focus-within:border-gray-6">
 					{avatar && <div className="shrink-0">{avatar}</div>}
 					<div className="flex-1 min-w-0">
+						{isGuest && expanded && (
+							<input
+								ref={nameInputRef}
+								type="text"
+								value={guestName}
+								maxLength={100}
+								onChange={(e) => onGuestNameChange?.(e.target.value)}
+								placeholder="Your name"
+								aria-label="Your name"
+								className="w-full mb-1.5 bg-transparent text-xs font-medium text-gray-12 placeholder:text-gray-8 placeholder:font-normal focus:outline-none"
+							/>
+						)}
 						{/* Two rows even at idle: a one-line sliver reads as a search box,
 						    and this field is the sidebar's whole point. Focus grows it to
 						    a proper drafting area. */}

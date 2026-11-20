@@ -10,7 +10,6 @@ import {
 	videoUploads,
 } from "@cap/database/schema";
 import type { VideoEditSpec, VideoMetadata } from "@cap/database/types";
-import { serverEnv } from "@cap/env";
 import { Storage } from "@cap/web-backend/src/Storage/index";
 import {
 	type AiGenerationLanguage,
@@ -31,6 +30,7 @@ import {
 	enhanceAudioFromUrl,
 } from "@/lib/audio-enhance";
 import { checkHasAudioTrack, extractAudioFromUrl } from "@/lib/audio-extract";
+import { transcribeWithDeepgramApi } from "@/lib/deepgram";
 import {
 	createEditTranscript,
 	editTranscriptWordsToCaptionVtt,
@@ -50,6 +50,7 @@ import {
 import { planSegmentsAudioExtraction } from "@/lib/segments-audio";
 import { downloadConcatenatedSegments } from "@/lib/segments-audio-download";
 import { fetchStorageUrl } from "@/lib/storage-fetch";
+import { getTranscriptionProvider } from "@/lib/transcription-provider";
 import { decodeStorageVideo } from "@/lib/video-storage";
 import { runWorkflowPromise } from "@/lib/workflow-runtime";
 
@@ -156,7 +157,7 @@ export async function transcribeVideoWorkflow(
 			};
 		}
 
-		const transcription = await transcribeWithAssemblyAI(
+		const transcription = await transcribeAudio(
 			audioUrl,
 			videoData.aiGenerationLanguage,
 			videoDurationMs,
@@ -218,7 +219,7 @@ export async function backfillEditTranscriptWorkflow(
 			return { success: false };
 		}
 
-		const editTranscript = await transcribeEditTranscriptWithAssemblyAI(
+		const editTranscript = await transcribeEditTranscript(
 			audioUrl,
 			videoEdit ? videoEdit.editSpec.sourceDuration : (video.duration ?? 0),
 		);
@@ -258,8 +259,8 @@ export async function backfillEditTranscriptWorkflow(
 async function validateVideo(videoId: string): Promise<VideoData> {
 	"use step";
 
-	if (!serverEnv().ASSEMBLY_API_KEY) {
-		throw new FatalError("Missing ASSEMBLY_API_KEY");
+	if (!getTranscriptionProvider()) {
+		throw new FatalError("Missing ASSEMBLY_API_KEY or DEEPGRAM_API_KEY");
 	}
 
 	const query = await db()
@@ -333,8 +334,8 @@ async function validateEditTranscriptBackfill(
 ) {
 	"use step";
 
-	if (!serverEnv().ASSEMBLY_API_KEY) {
-		throw new FatalError("Missing ASSEMBLY_API_KEY");
+	if (!getTranscriptionProvider()) {
+		throw new FatalError("Missing ASSEMBLY_API_KEY or DEEPGRAM_API_KEY");
 	}
 
 	const [video] = await db()
@@ -770,12 +771,15 @@ async function extractAudioFromSegmentsImpl(
 	}
 }
 
-async function transcribeWithAssemblyAI(
+async function transcribeAudio(
 	audioUrl: string,
 	language: AiGenerationLanguage,
 	videoDurationMs: number,
 ): Promise<TranscriptionArtifacts> {
 	"use step";
+
+	const provider = getTranscriptionProvider();
+	if (!provider) throw new FatalError("Missing ASSEMBLY_API_KEY or DEEPGRAM_API_KEY");
 
 	const audioResponse = await fetchStorageUrl(audioUrl);
 	if (!audioResponse.ok) {
@@ -785,28 +789,52 @@ async function transcribeWithAssemblyAI(
 	}
 
 	const audioBuffer = Buffer.from(await audioResponse.arrayBuffer());
-	const client = createAssemblyAIClient();
 
-	const transcript = await client.transcripts.transcribe({
-		audio: audioBuffer,
-		...getAssemblyAITranscriptionOptions(language),
-		disfluencies: true,
-	});
+	const transcript =
+		provider === "deepgram"
+			? await (async () => {
+					const contentType =
+						audioResponse.headers.get("content-type") || "audio/mpeg";
+					const result = await transcribeWithDeepgramApi(
+						audioBuffer,
+						contentType,
+						language,
+					);
+					if (result.words?.length === 0) {
+						throw new FatalError(
+							`Deepgram transcription found no spoken audio (language=${language})`,
+						);
+					}
+					console.log(
+						`[transcribe] Deepgram transcript finished with ${result.words?.length ?? 0} words, model=${result.speech_model_used}`,
+					);
+					return result;
+				})()
+			: await (async () => {
+					const client = createAssemblyAIClient();
+					const assemblyTranscript = await client.transcripts.transcribe({
+						audio: audioBuffer,
+						...getAssemblyAITranscriptionOptions(language),
+						disfluencies: true,
+					});
 
-	console.log(
-		`[transcribe] AssemblyAI transcript ${transcript.id} finished with status=${transcript.status}, model=${transcript.speech_model_used ?? "unknown"}`,
-	);
+					console.log(
+						`[transcribe] AssemblyAI transcript ${assemblyTranscript.id} finished with status=${assemblyTranscript.status}, model=${assemblyTranscript.speech_model_used ?? "unknown"}`,
+					);
 
-	if (transcript.status === "error") {
-		const transcriptError = transcript.error ?? "Unknown error";
-		const message = `AssemblyAI transcription failed (id=${transcript.id}, language=${language}): ${transcriptError}`;
+					if (assemblyTranscript.status === "error") {
+						const transcriptError = assemblyTranscript.error ?? "Unknown error";
+						const message = `AssemblyAI transcription failed (id=${assemblyTranscript.id}, language=${language}): ${transcriptError}`;
 
-		if (transcriptError.toLowerCase().includes("no spoken audio")) {
-			throw new FatalError(message);
-		}
+						if (transcriptError.toLowerCase().includes("no spoken audio")) {
+							throw new FatalError(message);
+						}
 
-		throw new Error(message);
-	}
+						throw new Error(message);
+					}
+
+					return assemblyTranscript;
+				})();
 
 	// One paid pass produces both artifacts: the immutable word transcript (in
 	// the original media timeline) and the caption VTT derived from those words.
@@ -822,11 +850,14 @@ async function transcribeWithAssemblyAI(
 	};
 }
 
-async function transcribeEditTranscriptWithAssemblyAI(
+async function transcribeEditTranscript(
 	audioUrl: string,
 	videoDurationSeconds: number,
 ): Promise<string> {
 	"use step";
+
+	const provider = getTranscriptionProvider();
+	if (!provider) throw new FatalError("Missing ASSEMBLY_API_KEY or DEEPGRAM_API_KEY");
 
 	const audioResponse = await fetchStorageUrl(audioUrl);
 	if (!audioResponse.ok) {
@@ -836,22 +867,34 @@ async function transcribeEditTranscriptWithAssemblyAI(
 	}
 
 	const audioBuffer = Buffer.from(await audioResponse.arrayBuffer());
-	const client = createAssemblyAIClient();
-	const transcript = await client.transcripts.transcribe({
-		audio: audioBuffer,
-		...getAssemblyAITranscriptionOptions("auto"),
-		disfluencies: true,
-	});
 
-	console.log(
-		`[transcribe] AssemblyAI editable transcript ${transcript.id} finished with status=${transcript.status}, model=${transcript.speech_model_used ?? "unknown"}`,
-	);
+	const transcript =
+		provider === "deepgram"
+			? await transcribeWithDeepgramApi(
+					audioBuffer,
+					audioResponse.headers.get("content-type") || "audio/mpeg",
+					"auto" as AiGenerationLanguage,
+				)
+			: await (async () => {
+					const client = createAssemblyAIClient();
+					const assemblyTranscript = await client.transcripts.transcribe({
+						audio: audioBuffer,
+						...getAssemblyAITranscriptionOptions("auto"),
+						disfluencies: true,
+					});
 
-	if (transcript.status === "error") {
-		throw new Error(
-			`AssemblyAI editable transcription failed (id=${transcript.id}): ${transcript.error ?? "Unknown error"}`,
-		);
-	}
+					console.log(
+						`[transcribe] AssemblyAI editable transcript ${assemblyTranscript.id} finished with status=${assemblyTranscript.status}, model=${assemblyTranscript.speech_model_used ?? "unknown"}`,
+					);
+
+					if (assemblyTranscript.status === "error") {
+						throw new Error(
+							`AssemblyAI editable transcription failed (id=${assemblyTranscript.id}): ${assemblyTranscript.error ?? "Unknown error"}`,
+						);
+					}
+
+					return assemblyTranscript;
+				})();
 
 	const durationMs =
 		videoDurationSeconds > 0

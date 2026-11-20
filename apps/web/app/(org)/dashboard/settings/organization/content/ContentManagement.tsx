@@ -60,7 +60,7 @@ function operationStatusClass(
 
 function PreviewSummary({ preview }: { preview: ContentTransferPreview }) {
 	const stats = [
-		{ label: "Caps", value: preview.videoCount },
+		{ label: "Shots", value: preview.videoCount },
 		{ label: "Folders", value: preview.folderCount },
 		{ label: "Current owners", value: preview.ownerCount },
 		{ label: "Folders to create", value: preview.foldersToCreate },
@@ -538,7 +538,7 @@ export function ContentManagement({
 												<div className="min-w-0">
 													<p className="text-sm font-medium text-gray-12">
 														{progress
-															? `${progress.processedVideos.toLocaleString()} of ${progress.totalVideos.toLocaleString()} Caps`
+															? `${progress.processedVideos.toLocaleString()} of ${progress.totalVideos.toLocaleString()} Shots`
 															: "Content transfer"}
 													</p>
 													<p className="mt-0.5 text-xs text-gray-9">

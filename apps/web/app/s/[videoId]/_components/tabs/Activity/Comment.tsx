@@ -6,12 +6,16 @@ import clsx from "clsx";
 import { motion } from "motion/react";
 import { useSearchParams } from "next/navigation";
 import type React from "react";
-import { memo } from "react";
+import { memo, useEffect, useState } from "react";
 import { useCurrentUser } from "@/app/Layout/AuthContext";
 import { FontAwesomeIcon } from "@/components/FontAwesomeIcon";
 import { LinkifiedText } from "@/components/LinkifiedText";
 import { SignedImageUrl } from "@/components/SignedImageUrl";
 import { Tooltip } from "@/components/Tooltip";
+import {
+	readStoredGuestName,
+	writeStoredGuestName,
+} from "@/lib/guest-name-storage";
 import type { CommentType } from "../../../Share";
 import { MediaCommentBody } from "../../media-comment/MediaCommentBody";
 import { isMediaComment } from "../../media-comment/media-comment-types";
@@ -26,7 +30,11 @@ const CommentComponent: React.FC<{
 	replies: CommentType[];
 	onReply: (commentId: Comment.CommentId) => void;
 	replyingToId: Comment.CommentId | null;
-	handleReply: (content: string, commentId: Comment.CommentId) => Promise<void>;
+	handleReply: (
+		content: string,
+		commentId: Comment.CommentId,
+		guestName?: string,
+	) => Promise<void>;
 	onCancelReply: () => void;
 	onDelete: (
 		commentId: Comment.CommentId,
@@ -50,6 +58,11 @@ const CommentComponent: React.FC<{
 	const isOwnComment = user?.id === comment.authorId;
 	const commentParams = useSearchParams().get("comment");
 	const replyParams = useSearchParams().get("reply");
+	const [guestName, setGuestName] = useState("");
+
+	useEffect(() => {
+		if (!user) setGuestName(readStoredGuestName());
+	}, [user]);
 
 	const handleDelete = () => {
 		if (window.confirm("Are you sure you want to delete this comment?")) {
@@ -145,7 +158,7 @@ const CommentComponent: React.FC<{
 						</p>
 					)}
 					<div className="flex items-center pt-2 mt-2.5 space-x-3 border-t border-gray-3">
-						{user && !isReplying && canReply && (
+						{!isReplying && canReply && (
 							<Tooltip content="Reply">
 								<Button
 									onClick={() => onReply(comment.id)}
@@ -178,11 +191,20 @@ const CommentComponent: React.FC<{
 			{isReplying && canReply && (
 				<div className="ml-5">
 					<CommentInput
-						onSubmit={(content) => handleReply(content, comment.id)}
+						onSubmit={(content) => {
+							if (!user) writeStoredGuestName(guestName);
+							return handleReply(
+								content,
+								comment.id,
+								user ? undefined : guestName,
+							);
+						}}
 						onCancel={onCancelReply}
 						placeholder="Write a reply..."
 						showCancelButton={true}
 						autoFocus={true}
+						guestName={user ? undefined : guestName}
+						onGuestNameChange={user ? undefined : setGuestName}
 					/>
 				</div>
 			)}

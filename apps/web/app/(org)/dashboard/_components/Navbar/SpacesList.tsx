@@ -114,7 +114,7 @@ const SpacesList = ({ toggleMobileNav }: { toggleMobileNav?: () => void }) => {
 
 		const toastId =
 			payload.ids.length > 1
-				? toast.loading(`Sharing ${payload.ids.length} Caps to ${spaceName}...`)
+				? toast.loading(`Sharing ${payload.ids.length} Shots to ${spaceName}...`)
 				: undefined;
 
 		try {
@@ -150,16 +150,16 @@ const SpacesList = ({ toggleMobileNav }: { toggleMobileNav?: () => void }) => {
 				);
 			} else if (shared > 0) {
 				toast.warning(
-					`Shared ${shared} of ${payload.ids.length} Caps to ${spaceName}`,
+					`Shared ${shared} of ${payload.ids.length} Shots to ${spaceName}`,
 					{ id: toastId },
 				);
 			} else {
-				toast.error(failure || "Failed to share cap", { id: toastId });
+				toast.error(failure || "Failed to share shot", { id: toastId });
 			}
 			if (shared > 0) router.refresh();
 		} catch (error) {
 			console.error("Error sharing cap:", error);
-			toast.error("Failed to share cap", { id: toastId });
+			toast.error("Failed to share shot", { id: toastId });
 		}
 	};
 

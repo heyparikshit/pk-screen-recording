@@ -158,7 +158,7 @@ export function DashboardSearch({
 		() => [
 			{
 				id: "my-caps",
-				title: "My Caps",
+				title: "My Shots",
 				subtitle: "Open your video library",
 				href: "/dashboard/caps",
 				value: "my caps videos recordings library",
@@ -166,7 +166,7 @@ export function DashboardSearch({
 			},
 			{
 				id: "record-cap",
-				title: "Record a Cap",
+				title: "Record a Shot",
 				subtitle: "Start a new browser recording",
 				href: "/dashboard/caps/record",
 				value: "record cap screen video browser recorder",
@@ -397,7 +397,7 @@ export function DashboardSearch({
 							ref={inputRef}
 							value={query}
 							onValueChange={updateQuery}
-							placeholder="Search caps, spaces, settings…"
+							placeholder="Search shots, spaces, settings…"
 							className="h-[52px] text-[15px] pr-12 outline-none"
 						/>
 						<CommandList className="overflow-y-auto px-2 pt-1 pb-2 h-[min(60vh,440px)] max-h-[min(60vh,440px)]">

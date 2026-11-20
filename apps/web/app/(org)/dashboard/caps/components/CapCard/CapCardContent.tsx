@@ -253,7 +253,7 @@ export const CapCardContent: React.FC<CapContentProps> = ({
 						placeholder="YYYY-MM-DD HH:mm:ss"
 					/>
 				) : (
-					<Tooltip content={`Cap created at ${effectiveDate}`}>
+					<Tooltip content={`Shot created at ${effectiveDate}`}>
 						<p
 							className="min-w-0 text-[13px] leading-5 truncate transition-colors cursor-pointer text-gray-10 hover:text-gray-12"
 							onClick={handleDateClick}

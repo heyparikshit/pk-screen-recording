@@ -17,17 +17,17 @@ export const dynamic = "force-dynamic";
 type AuthorizeSearchParams = Record<string, string | string[] | undefined>;
 
 const scopeDescriptions: Record<string, string> = {
-	"caps:read": "Read Caps, transcripts, and activity",
+	"caps:read": "Read Shots, transcripts, and activity",
 	"caps:comment": "Post comments and reactions",
-	"caps:write": "Change Cap titles, visibility, and settings",
+	"caps:write": "Change Shot titles, visibility, and settings",
 	"profile:read": "Read your Cap profile",
 	"profile:write": "Update your Cap profile",
 	"caps:upload": "Upload recordings and imported media",
 	"caps:process": "Start paid transcription, AI, translation, and edits",
-	"caps:delete": "Delete Caps after explicit confirmation",
+	"caps:delete": "Delete Shots after explicit confirmation",
 	"library:read": "Read folders, spaces, and sharing state",
 	"library:write": "Manage folders, spaces, and sharing",
-	"analytics:read": "Read Cap and workspace analytics",
+	"analytics:read": "Read Shot and workspace analytics",
 	"organizations:read": "Read your organizations and members",
 	"organizations:manage": "Manage organization settings",
 	"organizations:members": "Invite and manage organization members",

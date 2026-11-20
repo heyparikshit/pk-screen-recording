@@ -345,7 +345,7 @@ export const ImportLoomPage = ({
 		spaceId,
 	};
 	const rootLabel = !spaceId
-		? "My Caps"
+		? "My Shots"
 		: spaceId === orgId
 			? (activeOrganization?.organization.name ?? "Organization")
 			: (spacesData?.find((space) => space.id === spaceId)?.name ?? "Space");

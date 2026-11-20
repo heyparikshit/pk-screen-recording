@@ -85,7 +85,7 @@ const FolderCard = ({
 	const moveEnabled = canMove ?? !spaceId;
 	const effectiveMoveRootLabel =
 		moveRootLabel ??
-		(!spaceId ? "My Caps" : (activeOrganization?.organization.name ?? "Space"));
+		(!spaceId ? "My Shots" : (activeOrganization?.organization.name ?? "Space"));
 	const moveLocation = resolveMoveLocation(
 		spaceId,
 		activeOrganization?.organization.id,
@@ -398,7 +398,7 @@ const FolderCard = ({
 			console.error("Error moving video to folder:", error);
 			toast.error(
 				capPayload.ids.length > 1
-					? "Failed to move Caps to folder"
+					? "Failed to move Shots to folder"
 					: "Failed to move video to folder",
 			);
 		} finally {

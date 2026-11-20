@@ -47,7 +47,7 @@ import {
 import { SharedCaps } from "./SharedCaps";
 
 export const metadata: Metadata = {
-	title: "Shared Caps — Cap",
+	title: "Shared Shots — Cap",
 };
 
 export type SpaceMemberData = {

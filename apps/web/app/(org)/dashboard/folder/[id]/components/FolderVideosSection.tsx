@@ -106,14 +106,14 @@ export default function FolderVideosSection({
 				} else {
 					return yield* Effect.fail(
 						new Error(
-							`Failed to delete ${errorCount} cap${errorCount === 1 ? "" : "s"}`,
+							`Failed to delete ${errorCount} shot${errorCount === 1 ? "" : "s"}`,
 						),
 					);
 				}
 			}).pipe(Effect.fork);
 
 			toast.promise(Effect.runPromise(fiber.await.pipe(Effect.flatten)), {
-				loading: `Deleting ${ids.length} cap${ids.length === 1 ? "" : "s"}...`,
+				loading: `Deleting ${ids.length} shot${ids.length === 1 ? "" : "s"}...`,
 				success: (data) => {
 					if (data.error) {
 						return `Successfully deleted ${data.success} cap${
@@ -127,7 +127,7 @@ export default function FolderVideosSection({
 					}`;
 				},
 				error: (error) =>
-					error.message || "An error occurred while deleting caps",
+					error.message || "An error occurred while deleting shots",
 			});
 
 			return yield* fiber.await.pipe(Effect.flatten);
@@ -141,11 +141,11 @@ export default function FolderVideosSection({
 	const { mutate: deleteCap, isPending: isDeletingCap } = useEffectMutation({
 		mutationFn: (id: Video.VideoId) => rpc.VideoDelete(id),
 		onSuccess: () => {
-			toast.success("Cap deleted successfully");
+			toast.success("Shot deleted successfully");
 			router.refresh();
 		},
 		onError: () => {
-			toast.error("Failed to delete cap");
+			toast.error("Failed to delete shot");
 		},
 	});
 
@@ -183,8 +183,8 @@ export default function FolderVideosSection({
 							</p>
 							<p className="max-w-sm text-sm text-gray-10 text-pretty">
 								{canMove
-									? "Drag Caps onto this folder from My Caps, use Move on any Cap, or upload one here."
-									: "Caps added to this folder will show up here."}
+									? "Drag Shots onto this folder from My Shots, use Move on any Shot, or upload one here."
+									: "Shots added to this folder will show up here."}
 							</p>
 						</div>
 					</div>

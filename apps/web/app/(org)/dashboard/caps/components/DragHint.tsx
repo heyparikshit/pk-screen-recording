@@ -150,8 +150,8 @@ export function DragHint({
 								{drag.kind === "folder"
 									? "Moving a folder"
 									: drag.count > 1
-										? `Moving ${drag.count} Caps`
-										: "Moving 1 Cap"}
+										? `Moving ${drag.count} Shots`
+										: "Moving 1 Shot"}
 							</span>
 							<span className="text-xs truncate text-gray-10">
 								{drag.kind === "folder" ? folder : caps}
