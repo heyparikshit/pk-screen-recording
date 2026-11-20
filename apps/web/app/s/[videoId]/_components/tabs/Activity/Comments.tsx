@@ -44,6 +44,9 @@ export const Comments = Object.assign(
 			commentsDisabled: boolean;
 			ownerName?: string | null;
 			canRecordMedia?: boolean;
+			/** Lets the owner delete any comment, including guest comments that
+			 * have no account to sign back in and delete them from. */
+			isOwner?: boolean;
 		}
 	>((props, ref) => {
 		const {
@@ -54,6 +57,7 @@ export const Comments = Object.assign(
 			onSeek,
 			commentsDisabled,
 			videoId,
+			isOwner,
 		} = props;
 		const commentParams = useSearchParams().get("comment");
 		const replyParams = useSearchParams().get("reply");
@@ -351,6 +355,7 @@ export const Comments = Object.assign(
 									onCancelReply={handleCancelReply}
 									onDelete={handleDeleteComment}
 									onSeek={onSeek}
+									canModerate={isOwner}
 								/>
 							);
 						})}

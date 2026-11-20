@@ -42,6 +42,9 @@ const CommentComponent: React.FC<{
 	) => void;
 	level?: number;
 	onSeek?: (time: number) => void;
+	/** The video owner can delete any comment, including guest comments that
+	 * have no account to sign back in and delete them from. */
+	canModerate?: boolean;
 }> = ({
 	comment,
 	replies,
@@ -52,10 +55,11 @@ const CommentComponent: React.FC<{
 	onDelete,
 	level = 0,
 	onSeek,
+	canModerate = false,
 }) => {
 	const user = useCurrentUser();
 	const isReplying = replyingToId === comment.id;
-	const isOwnComment = user?.id === comment.authorId;
+	const isOwnComment = user?.id === comment.authorId || canModerate;
 	const commentParams = useSearchParams().get("comment");
 	const replyParams = useSearchParams().get("reply");
 	const [guestName, setGuestName] = useState("");
@@ -223,6 +227,7 @@ const CommentComponent: React.FC<{
 							onDelete={onDelete}
 							level={1}
 							onSeek={onSeek}
+							canModerate={canModerate}
 						/>
 					))}
 				</div>

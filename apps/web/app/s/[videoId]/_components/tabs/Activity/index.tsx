@@ -75,6 +75,7 @@ export const Activity = Object.assign(
 							commentsDisabled={commentsDisabled}
 							ownerName={ownerName}
 							canRecordMedia={canRecordMedia}
+							isOwner={isOwner}
 						/>
 					)}
 				</Activity.Shell>
