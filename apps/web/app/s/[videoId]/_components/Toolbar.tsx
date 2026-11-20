@@ -2,19 +2,23 @@ import { Button } from "@cap/ui";
 // type-only on purpose: a value import of @cap/web-domain drags the whole
 // effect runtime (~250 KB gz) into the share page's entry chunk. The branded
 // ids carry no constraints, so plain casts replace `.make()` losslessly.
-import type { Comment } from "@cap/web-domain";
+import type { Comment, User } from "@cap/web-domain";
 import { AnimatePresence, motion } from "motion/react";
 import dynamic from "next/dynamic";
 import { startTransition, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { guestComment } from "@/actions/videos/guest-comment";
 import { newComment } from "@/actions/videos/new-comment";
 import { useCurrentUser } from "@/app/Layout/AuthContext";
+import {
+	readStoredGuestName,
+	writeStoredGuestName,
+} from "@/lib/guest-name-storage";
 import type { CommentType } from "../Share";
 import type { VideoData } from "../types";
-import { AuthOverlay } from "./AuthOverlayLazy";
 import { RecordActionButtons } from "./media-comment/record-actions";
 import type { RecordIntentKind } from "./timeline/TimelineComposer";
-import { handleEmojiReaction, REACTIONS } from "./toolbar-reactions";
+import { REACTIONS } from "./toolbar-reactions";
 
 // Capture and upload code stays out of the page bundle until someone records.
 const RecorderSurface = dynamic(
@@ -67,9 +71,13 @@ export const Toolbar = ({
 	const user = useCurrentUser();
 	const [commentBoxOpen, setCommentBoxOpen] = useState(false);
 	const [comment, setComment] = useState("");
+	const [guestName, setGuestName] = useState("");
 	const [posting, setPosting] = useState(false);
 	const postingRef = useRef(false);
-	const [showAuthOverlay, setShowAuthOverlay] = useState(false);
+
+	useEffect(() => {
+		if (!user) setGuestName(readStoredGuestName());
+	}, [user]);
 	const [recordIntent, setRecordIntent] = useState<{
 		kind: RecordIntentKind;
 		t: number;
@@ -88,61 +96,66 @@ export const Toolbar = ({
 		setRecordIntent({ kind, t });
 	};
 
+	// One click, no sign-in and no name prompt: a reaction is low-stakes enough
+	// to just post under "Guest" (or whatever name an earlier comment set).
 	const handleEmojiClick = (emoji: string) => {
-		handleEmojiReaction({
-			emoji,
-			canReact,
-			user,
-			onRequireAuth: () => setShowAuthOverlay(true),
-			onReact: async (chosenEmoji, authedUser) => {
-				const videoElement = document.querySelector(
-					"video",
-				) as HTMLVideoElement;
-				const currentTime = data.isScreenshot
-					? null
-					: videoElement?.currentTime || 0;
-				const optimisticComment: CommentType = {
-					id: `temp-${Date.now()}` as Comment.CommentId,
-					authorId: authedUser.id,
-					authorName: authedUser.name,
-					authorImage: authedUser.imageUrl,
-					content: chosenEmoji,
-					createdAt: new Date(),
-					videoId: data.id,
-					parentCommentId: "" as Comment.CommentId,
-					type: "emoji",
-					timestamp: currentTime,
-					updatedAt: new Date(),
-					mediaKey: null,
-					mediaDuration: null,
-					mediaMeta: null,
-					sending: true,
-				};
+		if (!canReact) return;
 
-				onOptimisticComment?.(optimisticComment);
+		const videoElement = document.querySelector("video") as HTMLVideoElement;
+		const currentTime = data.isScreenshot
+			? null
+			: videoElement?.currentTime || 0;
+		const optimisticComment: CommentType = {
+			id: `temp-${Date.now()}` as Comment.CommentId,
+			authorId: user?.id ?? ("" as User.UserId),
+			authorName: user ? user.name : guestName || "Guest",
+			authorImage: user?.imageUrl ?? null,
+			content: emoji,
+			createdAt: new Date(),
+			videoId: data.id,
+			parentCommentId: "" as Comment.CommentId,
+			type: "emoji",
+			timestamp: currentTime,
+			updatedAt: new Date(),
+			mediaKey: null,
+			mediaDuration: null,
+			mediaMeta: null,
+			sending: true,
+		};
 
-				try {
-					const newCommentData = await newComment({
-						content: chosenEmoji,
-						videoId: data.id,
-						authorImage: authedUser.imageUrl,
-						parentCommentId: "" as Comment.CommentId,
-						type: "emoji",
-						timestamp: currentTime,
-					});
-					startTransition(() => {
-						onCommentSuccess?.(newCommentData);
-					});
-				} catch (error) {
-					console.error("Error posting comment:", error);
-					toast.error("Couldn't add your reaction. Please try again.");
-				}
-			},
-		});
+		onOptimisticComment?.(optimisticComment);
+
+		(async () => {
+			try {
+				const newCommentData = user
+					? await newComment({
+							content: emoji,
+							videoId: data.id,
+							authorImage: user.imageUrl,
+							parentCommentId: "" as Comment.CommentId,
+							type: "emoji",
+							timestamp: currentTime,
+						})
+					: await guestComment({
+							content: emoji,
+							videoId: data.id,
+							guestName: guestName || undefined,
+							type: "emoji",
+							parentCommentId: "" as Comment.CommentId,
+							timestamp: currentTime,
+						});
+				startTransition(() => {
+					onCommentSuccess?.(newCommentData);
+				});
+			} catch (error) {
+				console.error("Error posting comment:", error);
+				toast.error("Couldn't add your reaction. Please try again.");
+			}
+		})();
 	};
 
 	const handleCommentSubmit = async () => {
-		if (!canComment || comment.length === 0 || !user || postingRef.current) {
+		if (!canComment || comment.length === 0 || postingRef.current) {
 			return;
 		}
 		postingRef.current = true;
@@ -153,9 +166,9 @@ export const Toolbar = ({
 			: videoElement?.currentTime || 0;
 		const optimisticComment: CommentType = {
 			id: `temp-${Date.now()}` as Comment.CommentId,
-			authorId: user.id,
-			authorName: user.name,
-			authorImage: user.imageUrl,
+			authorId: user?.id ?? ("" as User.UserId),
+			authorName: user ? user.name : guestName || "Guest",
+			authorImage: user?.imageUrl ?? null,
 			content: comment,
 			createdAt: new Date(),
 			videoId: data.id,
@@ -172,14 +185,24 @@ export const Toolbar = ({
 		onOptimisticComment?.(optimisticComment);
 
 		try {
-			const newCommentData = await newComment({
-				content: comment,
-				videoId: data.id,
-				authorImage: user.imageUrl,
-				parentCommentId: "" as Comment.CommentId,
-				type: "text",
-				timestamp: currentTime,
-			});
+			const newCommentData = user
+				? await newComment({
+						content: comment,
+						videoId: data.id,
+						authorImage: user.imageUrl,
+						parentCommentId: "" as Comment.CommentId,
+						type: "text",
+						timestamp: currentTime,
+					})
+				: await guestComment({
+						content: comment,
+						videoId: data.id,
+						guestName: guestName || undefined,
+						type: "text",
+						parentCommentId: "" as Comment.CommentId,
+						timestamp: currentTime,
+					});
+			if (!user && guestName) writeStoredGuestName(guestName);
 			startTransition(() => {
 				onCommentSuccess?.(newCommentData);
 			});
@@ -211,10 +234,6 @@ export const Toolbar = ({
 				)
 			) {
 				e.preventDefault();
-				if (!user) {
-					setShowAuthOverlay(true);
-					return;
-				}
 				const videoElement = document.querySelector(
 					"video",
 				) as HTMLVideoElement;
@@ -229,14 +248,10 @@ export const Toolbar = ({
 		return () => {
 			window.removeEventListener("keydown", handleKeyPress);
 		};
-	}, [canComment, commentBoxOpen, user]);
+	}, [canComment, commentBoxOpen]);
 
 	const handleCommentClick = () => {
 		if (!canComment) return;
-		if (!user) {
-			setShowAuthOverlay(true);
-			return;
-		}
 		const videoElement = document.querySelector("video") as HTMLVideoElement;
 		if (videoElement) {
 			videoElement.pause();
@@ -385,11 +400,6 @@ export const Toolbar = ({
 					placement="floating"
 				/>
 			)}
-
-			<AuthOverlay
-				isOpen={showAuthOverlay}
-				onClose={() => setShowAuthOverlay(false)}
-			/>
 		</>
 	);
 };

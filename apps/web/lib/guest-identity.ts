@@ -25,12 +25,16 @@ export function isGuestEmail(email: string | null | undefined): boolean {
  * NOT NULL + unique constraints. Reuses the same guest row across repeat
  * comments from this browser (via an httpOnly cookie) so a viewer's name
  * stays stable instead of forking a new identity per comment.
+ *
+ * `name` is optional: reactions post silently (no name prompt), so an
+ * empty/missing name falls back to "Guest" rather than failing.
  */
 export async function resolveGuestCommenter(
-	name: string,
+	name?: string,
 ): Promise<User.UserId> {
-	const trimmedName = name.trim().slice(0, MAX_GUEST_NAME_LENGTH);
-	if (!trimmedName) throw new Error("Name is required");
+	// Only overwrite the stored name when one was actually given — a nameless
+	// reaction must not clobber a name set by an earlier comment.
+	const trimmedName = name?.trim().slice(0, MAX_GUEST_NAME_LENGTH) || "";
 
 	const cookieStore = await cookies();
 	const existingId = cookieStore.get(GUEST_COOKIE_NAME)?.value;
@@ -43,10 +47,12 @@ export async function resolveGuestCommenter(
 			.limit(1);
 
 		if (existing) {
-			await db()
-				.update(users)
-				.set({ name: trimmedName })
-				.where(eq(users.id, existing.id));
+			if (trimmedName) {
+				await db()
+					.update(users)
+					.set({ name: trimmedName })
+					.where(eq(users.id, existing.id));
+			}
 			return existing.id as User.UserId;
 		}
 	}
@@ -56,7 +62,7 @@ export async function resolveGuestCommenter(
 		.insert(users)
 		.values({
 			id,
-			name: trimmedName,
+			name: trimmedName || "Guest",
 			email: `guest-${id}@${GUEST_EMAIL_DOMAIN}`,
 		});
 

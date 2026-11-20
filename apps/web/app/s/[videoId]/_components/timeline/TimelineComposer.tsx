@@ -149,6 +149,7 @@ export function TimelineComposer({
 						content,
 						videoId,
 						guestName,
+						type: "text",
 						parentCommentId: Comment.CommentId.make(""),
 						timestamp: anchorTime,
 					});

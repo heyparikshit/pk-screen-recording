@@ -206,6 +206,7 @@ export const Comments = Object.assign(
 							content,
 							videoId,
 							guestName: guestName as string,
+							type: "text",
 							parentCommentId: actualParentId,
 							timestamp: currentTime,
 						});
@@ -267,6 +268,7 @@ export const Comments = Object.assign(
 					content,
 					videoId,
 					guestName,
+					type: "text",
 					parentCommentId: "" as Comment.CommentId,
 					timestamp: currentTime,
 				});

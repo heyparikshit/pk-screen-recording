@@ -19,23 +19,32 @@ import * as EffectRuntime from "@/lib/server";
 import { isVideoFeedbackDisabled } from "@/lib/video-feedback-rules";
 
 /**
- * Lets a viewer with no Cap account leave a text comment, giving only their
- * name — no sign-in. See `resolveGuestCommenter` for how that name becomes a
- * (non-login-capable) author identity that the rest of the comment system
- * already knows how to render. Deliberately text-only: recording a video/audio
- * reply still requires a real account (newComment / media-comment routes).
+ * Lets a viewer with no Cap account leave a text comment or emoji reaction,
+ * no sign-in required. See `resolveGuestCommenter` for how an (optional, for
+ * reactions) name becomes a non-login-capable author identity that the rest
+ * of the comment system already knows how to render. Deliberately limited to
+ * text/emoji: recording a video/audio reply still requires a real account
+ * (newComment / media-comment routes).
  */
 export async function guestComment(data: {
 	content: string;
 	videoId: Video.VideoId;
-	guestName: string;
+	/** Omitted for reactions, which post silently under "Guest". */
+	guestName?: string;
+	type: "text" | "emoji";
 	parentCommentId: Comment.CommentId;
 	timestamp: number | null;
 }) {
 	const content = data.content;
 	const videoId = data.videoId;
+	const type = data.type;
 	const parentCommentId = data.parentCommentId;
 	const timestamp = data.timestamp;
+	const conditionalType = parentCommentId
+		? "reply"
+		: type === "emoji"
+			? "reaction"
+			: "comment";
 
 	if (!content || !videoId) {
 		throw new Error("Content and videoId are required");
@@ -70,9 +79,13 @@ export async function guestComment(data: {
 		throw new Error("Video not found");
 	}
 
-	if (await isVideoFeedbackDisabled(videoId, "disableComments")) {
+	if (
+		await isVideoFeedbackDisabled(
+			videoId,
+			conditionalType === "reaction" ? "disableReactions" : "disableComments",
+		)
+	)
 		throw new Error("Feedback is disabled on this video");
-	}
 
 	if (
 		parentCommentId &&
@@ -85,7 +98,7 @@ export async function guestComment(data: {
 	const newCommentRow = {
 		id,
 		authorId,
-		type: "text" as const,
+		type,
 		content,
 		videoId,
 		timestamp: timestamp ?? null,
@@ -101,7 +114,7 @@ export async function guestComment(data: {
 
 	try {
 		await createNotification({
-			type: parentCommentId ? "reply" : "comment",
+			type: conditionalType,
 			videoId,
 			authorId,
 			comment: { id, content },
@@ -113,7 +126,7 @@ export async function guestComment(data: {
 
 	const commentWithAuthor = {
 		...newCommentRow,
-		authorName: data.guestName.trim().slice(0, 100),
+		authorName: data.guestName?.trim().slice(0, 100) || "Guest",
 		authorImage: null,
 		sending: false,
 	};
