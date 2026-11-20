@@ -837,7 +837,7 @@ export const ImportLoomPage = ({
 										</Button>
 										{spaceId && (
 											<Link href="/dashboard/import/loom" className="underline">
-												Import to My Caps instead
+												Import to My Shots instead
 											</Link>
 										)}
 									</div>

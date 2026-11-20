@@ -208,7 +208,7 @@ export async function getOwnedVideoMoveDestinations(
 	return [
 		{
 			location: { type: "personal" },
-			name: "My Caps",
+			name: "My Shots",
 			folders: pick(null),
 			canCreateFolder: creatable,
 		},
