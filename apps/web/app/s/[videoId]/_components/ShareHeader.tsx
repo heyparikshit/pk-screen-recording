@@ -33,6 +33,7 @@ import {
 	Lock,
 	MousePointer2,
 	Pencil,
+	RotateCcw,
 	Scissors,
 	Users,
 	X,
@@ -46,6 +47,7 @@ import {
 	hideShareableLinkCapLogo,
 	selectShareableLinkBrandingOrganization,
 } from "@/actions/organization/shareable-link-icon";
+import { retryVideoProcessing } from "@/actions/video/retry-processing";
 import { editTitle } from "@/actions/videos/edit-title";
 import type { VideoStatusResult } from "@/actions/videos/get-status";
 import { useDashboardContext } from "@/app/(org)/dashboard/DashboardContext";
@@ -272,6 +274,7 @@ export const ShareHeader = ({
 	const [showCopyOptions, setShowCopyOptions] = useState(false);
 	const [capturedTime, setCapturedTime] = useState(0);
 	const [isHidingBranding, setIsHidingBranding] = useState(false);
+	const [isReprocessing, setIsReprocessing] = useState(false);
 	const [isOpeningBrandingSettings, setIsOpeningBrandingSettings] =
 		useState(false);
 	const titleInputRef = useRef<HTMLInputElement>(null);
@@ -687,6 +690,29 @@ export const ShareHeader = ({
 		}
 
 		navigateWithTransition("edit-enter", () => push(`/s/${data.id}/edit`));
+	};
+
+	// Re-runs the mux/optimize step for a video that's stuck serving its raw
+	// upload (e.g. the media server was misconfigured when it first uploaded).
+	// Playback itself isn't broken in that state, so the player's own retry
+	// overlay never shows; this gives the owner a way to kick it manually.
+	const handleReprocessVideo = async () => {
+		setIsReprocessing(true);
+		try {
+			const result = await retryVideoProcessing({ videoId: data.id });
+			if (result.status === "already-processing") {
+				toast.success("Video processing is already running");
+			} else {
+				toast.success("Reprocessing started");
+			}
+			refresh();
+		} catch (error) {
+			toast.error(
+				error instanceof Error ? error.message : "Failed to start reprocessing",
+			);
+		} finally {
+			setIsReprocessing(false);
+		}
 	};
 
 	const handleHideBranding = async () => {
@@ -1291,6 +1317,18 @@ export const ShareHeader = ({
 															)}
 														</DropdownMenuItem>
 													)}
+													{data.hasActiveUpload && !data.isScreenshot && (
+														<DropdownMenuItem
+															onClick={handleReprocessVideo}
+															disabled={isReprocessing}
+															className="flex items-center gap-2 rounded-lg"
+														>
+															<RotateCcw className="size-3.5" />
+															<p className="text-sm text-gray-12">
+																{isReprocessing ? "Reprocessing\u2026" : "Reprocess video"}
+															</p>
+														</DropdownMenuItem>
+													)}
 													<DropdownMenuItem
 														onClick={() => {
 															if (!user.isPro) setUpgradeModalOpen(true);
@@ -1417,6 +1455,9 @@ export const ShareHeader = ({
  */
 function ViewCount({ views }: { views: MaybePromise<number | null> }) {
 	const count = views instanceof Promise ? use(views) : views;
-	if (count === null || count === undefined) return null;
+	// Also hides a genuine 0 — view analytics need Tinybird configured, which
+	// this deployment doesn't have, so every video would otherwise sit at a
+	// permanent, misleading "0 views".
+	if (!count) return null;
 	return <>{` · ${count} ${count === 1 ? "view" : "views"}`}</>;
 }
