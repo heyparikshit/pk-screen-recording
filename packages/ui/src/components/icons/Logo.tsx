@@ -1,4 +1,5 @@
-import { GlassMark, GlassWordmark, useGlassLogoIds } from "./glass-logo";
+import { useId } from "react";
+import { BrandMark } from "./BrandMark";
 
 export const Logo = ({
 	className,
@@ -17,7 +18,7 @@ export const Logo = ({
 	style?: React.CSSProperties;
 	viewBoxDimensions?: `${string} ${string} ${string} ${string}`;
 }) => {
-	const ids = useGlassLogoIds();
+	const gradientId = `brand-mark-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
 
 	return (
 		<div className="flex items-center">
@@ -28,11 +29,23 @@ export const Logo = ({
 				fill="none"
 				style={style}
 				role="img"
-				aria-label="Cap Logo"
+				aria-label="PK's Screen Recording Logo"
 				className={className}
 			>
-				<GlassMark ids={ids} />
-				{!hideLogoName && <GlassWordmark ids={ids} white={white} />}
+				<BrandMark gradientId={gradientId} />
+				{!hideLogoName && (
+					<text
+						x="48"
+						y="27"
+						fontFamily="Arial, Helvetica, sans-serif"
+						fontWeight="700"
+						fontSize="21"
+						className={white ? undefined : "fill-gray-12"}
+						fill={white ? "#F5F7FA" : undefined}
+					>
+						PK
+					</text>
+				)}
 			</svg>
 			{showVersion && (
 				<span

@@ -92,7 +92,7 @@ export function LoginForm() {
 			if (error === "OAuthAccountNotLinked") {
 				setOauthError(true);
 				return toast.error(
-					"This email already has a Cap account. Sign in using your original sign-in method.",
+					"This email already has an account. Sign in using your original sign-in method.",
 				);
 			} else if (error === "SsoMissingProfileAttributes") {
 				setShowOrgInput(true);
@@ -101,7 +101,7 @@ export function LoginForm() {
 				return;
 			} else if (error === "DisposableEmail") {
 				return toast.error(
-					"Temporary email addresses can't be used with Cap. Please use your work or personal email.",
+					"Temporary email addresses can't be used. Please use your work or personal email.",
 				);
 			} else if (error === "SsoSessionExpired") {
 				setShowOrgInput(true);
@@ -339,15 +339,8 @@ export function LoginForm() {
 					layout="position"
 					className="text-2xl font-semibold text-gray-12"
 				>
-					Sign in to Cap
+					PK's Screen Recording
 				</motion.h1>
-				<motion.p
-					key="subtitle"
-					layout="position"
-					className="text-[16px] text-gray-10"
-				>
-					Beautiful screen recordings, owned by you.
-				</motion.p>
 			</motion.div>
 			<motion.div layout="position" className="flex flex-col space-y-3">
 				<SsoErrorNotice error={searchParams?.get("error")} />
@@ -471,29 +464,6 @@ export function LoginForm() {
 								)}
 							</motion.div>
 						</AnimatePresence>
-						<motion.p
-							layout="position"
-							className="pt-3 text-xs text-center text-gray-9"
-						>
-							By typing your email and clicking continue, you acknowledge that
-							you have both read and agree to Cap's{" "}
-							<Link
-								href="/terms"
-								target="_blank"
-								className="text-xs font-semibold text-gray-12 hover:text-blue-300"
-							>
-								Terms of Service
-							</Link>{" "}
-							and{" "}
-							<Link
-								href="/privacy"
-								target="_blank"
-								className="text-xs font-semibold text-gray-12 hover:text-blue-300"
-							>
-								Privacy Policy
-							</Link>
-							.
-						</motion.p>
 					</motion.div>
 				</Suspense>
 			</motion.div>
@@ -621,18 +591,6 @@ const NormalLogin = ({
                   </div>
                 )} */}
 			</motion.div>
-			<motion.p
-				layout="position"
-				className="mt-3 mb-2 text-xs text-center text-gray-9"
-			>
-				Don't have an account?{" "}
-				<Link
-					href="/signup"
-					className="text-xs font-semibold text-blue-9 hover:text-blue-8"
-				>
-					Sign up here
-				</Link>
-			</motion.p>
 
 			{(publicEnv.googleAuthAvailable ||
 				publicEnv.workosAuthAvailable ||

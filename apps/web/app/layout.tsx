@@ -43,31 +43,28 @@ const defaultFont = localFont({
 });
 
 export const metadata: Metadata = {
-	metadataBase: new URL("https://cap.so"),
-	title: "Cap — Beautiful screen recordings, owned by you.",
-	description:
-		"Cap is the open source alternative to Loom. Lightweight, powerful, and cross-platform. Record and share in seconds.",
+	metadataBase: new URL("https://record.heypk.work"),
+	title: "PK's Screen Recording",
+	description: "PK's private screen recording library.",
 	openGraph: {
-		title: "Cap — Beautiful screen recordings, owned by you.",
-		description:
-			"Cap is the open source alternative to Loom. Lightweight, powerful, and cross-platform. Record and share in seconds.",
+		title: "PK's Screen Recording",
+		description: "PK's private screen recording library.",
 		type: "website",
-		url: "https://cap.so",
-		siteName: "Cap",
+		url: "https://record.heypk.work",
+		siteName: "PK's Screen Recording",
 		images: [
 			{
 				url: "/api/og",
 				width: 1200,
 				height: 630,
-				alt: "Cap — Beautiful screen recordings, owned by you.",
+				alt: "PK's Screen Recording",
 			},
 		],
 	},
 	twitter: {
 		card: "summary_large_image",
-		title: "Cap — Beautiful screen recordings, owned by you.",
-		description:
-			"Cap is the open source alternative to Loom. Lightweight, powerful, and cross-platform. Record and share in seconds.",
+		title: "PK's Screen Recording",
+		description: "PK's private screen recording library.",
 		images: ["/api/og"],
 	},
 };
