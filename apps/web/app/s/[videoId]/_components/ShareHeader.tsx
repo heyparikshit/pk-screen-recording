@@ -133,16 +133,6 @@ const DuplicateCapMenuItem = dynamic(() => import("./DuplicateCapMenuItem"), {
 });
 
 /**
- * Where a signed-out viewer can go next. Three, not the full site nav: this
- * shares the row with the video's title and has to stay out of its way.
- */
-const SIGNED_OUT_LINKS = [
-	{ label: "Download", href: "/download" },
-	{ label: "Blog", href: "/blog" },
-	{ label: "Pricing", href: "/pricing" },
-];
-
-/**
  * Shared by the heading and the rename field. Renaming is meant to read as a
  * caret appearing in the title, so both have to render the same glyphs at the
  * same size on the same baseline — the line heights are spelled out because a
@@ -741,53 +731,9 @@ export const ShareHeader = ({
 		}
 	};
 
-	/**
-	 * A quiet way out for signed-out viewers. A shared Cap is often someone's
-	 * first sight of the product, and until now the page offered them nowhere
-	 * to go. Deliberately understated: muted text links and one small button,
-	 * not a marketing bar competing with the video.
-	 *
-	 * Only shown alongside Cap's own logo. An org paying to white-label or hide
-	 * the branding has bought the right not to be advertised at.
-	 */
-	const renderSignedOutNav = () => {
-		if (user !== null || branding?.type !== "cap") return null;
-
-		return (
-			<nav
-				aria-label="Cap"
-				className="flex shrink-0 flex-wrap items-center justify-end gap-x-5 gap-y-2"
-			>
-				<div className="hidden items-center gap-5 md:flex">
-					{SIGNED_OUT_LINKS.map((link) => (
-						<a
-							key={link.href}
-							href={`${link.href}?ref=video_${data.id}`}
-							className="text-[13px] text-gray-10 transition-colors hover:text-gray-12"
-						>
-							{link.label}
-						</a>
-					))}
-				</div>
-				<div className="flex items-center gap-3">
-					<a
-						href="/login"
-						className="text-[13px] text-gray-11 transition-colors hover:text-gray-12"
-					>
-						Log in
-					</a>
-					<Button
-						variant="dark"
-						size="xs"
-						href={`/signup?ref=video_${data.id}`}
-						className="h-8 rounded-full px-3 text-xs"
-					>
-						Get Cap free
-					</Button>
-				</div>
-			</nav>
-		);
-	};
+	// This deployment is invite-only: there's no public signup to advertise
+	// viewers into, so the share page never shows a marketing nav.
+	const renderSignedOutNav = () => null;
 
 	const renderBranding = () => {
 		if (!branding) return null;
