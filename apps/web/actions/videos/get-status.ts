@@ -62,10 +62,6 @@ export async function getVideoStatus(
 
 	const metadata: VideoMetadata = (video.metadata as VideoMetadata) || {};
 
-	console.error(
-		`[Get Status DIAG] videoId=${videoId} transcriptionStatus=${JSON.stringify(video.transcriptionStatus)} isTranscriptionConfigured=${isTranscriptionConfigured()} hasDeepgram=${Boolean(process.env.DEEPGRAM_API_KEY)} hasAssembly=${Boolean(process.env.ASSEMBLY_API_KEY)}`,
-	);
-
 	if (!video.transcriptionStatus && isTranscriptionConfigured()) {
 		const activeUpload = await db()
 			.select({
@@ -77,24 +73,36 @@ export async function getVideoStatus(
 			.where(eq(videoUploads.videoId, videoId))
 			.limit(1);
 
-		if (activeUpload.length > 0) {
-			const upload = activeUpload[0];
-			if (
-				video.source?.type === "desktopSegments" &&
-				upload?.phase === "error" &&
-				isRetryableDesktopSegmentsFinalizationError(upload.processingError)
-			) {
-				queueDesktopSegmentsFinalization({
-					videoId,
-					userId: video.ownerId,
-				}).catch((error) => {
-					console.error(
-						`[Get Status] Error queueing segment finalization for video ${videoId}:`,
-						error,
-					);
-				});
-			}
+		const upload = activeUpload[0];
 
+		if (
+			video.source?.type === "desktopSegments" &&
+			upload?.phase === "error" &&
+			isRetryableDesktopSegmentsFinalizationError(upload.processingError)
+		) {
+			queueDesktopSegmentsFinalization({
+				videoId,
+				userId: video.ownerId,
+			}).catch((error) => {
+				console.error(
+					`[Get Status] Error queueing segment finalization for video ${videoId}:`,
+					error,
+				);
+			});
+		}
+
+		// A video keeps its video_uploads row forever (it's the processing
+		// history, not just an in-flight marker), so only an upload still
+		// genuinely in progress should hold transcription back — not one that
+		// already finished (one way or another) a while ago, which otherwise
+		// permanently blocked transcription for any video whose upload ever
+		// hit a (even unrelated, already-handled) error.
+		const uploadStillInProgress =
+			upload?.phase === "uploading" ||
+			upload?.phase === "processing" ||
+			upload?.phase === "generating_thumbnail";
+
+		if (uploadStillInProgress) {
 			return {
 				transcriptionStatus: null,
 				aiGenerationStatus:
