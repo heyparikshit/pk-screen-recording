@@ -62,6 +62,10 @@ export async function getVideoStatus(
 
 	const metadata: VideoMetadata = (video.metadata as VideoMetadata) || {};
 
+	console.error(
+		`[Get Status DIAG] videoId=${videoId} transcriptionStatus=${JSON.stringify(video.transcriptionStatus)} isTranscriptionConfigured=${isTranscriptionConfigured()} hasDeepgram=${Boolean(process.env.DEEPGRAM_API_KEY)} hasAssembly=${Boolean(process.env.ASSEMBLY_API_KEY)}`,
+	);
+
 	if (!video.transcriptionStatus && isTranscriptionConfigured()) {
 		const activeUpload = await db()
 			.select({
